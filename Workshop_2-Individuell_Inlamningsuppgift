@@ -1,0 +1,200 @@
+Del 1 – Förstå MITRE ATT&CK som analysramverk
+Uppgift 1
+MITRE ATT&CK används som ett gemensamt språk och analysramverk i säkerhetsteam. Det
+hjälper team att beskriva angreppsbeteenden, strukturera hotanalyser och koppla incidenter
+till taktiker och tekniker. Ramverket stödjer prioritering av detekteringar, identifierar luckor i
+försvar och underlättar kommunikation mellan red team, blue team och ledning. Det är ett
+verktyg för försvar, inte en angreppsmanual.
+
+Uppgift 2
+ATT&CK ska inte användas som checklista för attacker eftersom det är ett analysramverk
+baserat på observerade beteenden, inte en instruktionsbok. Syftet är att hjälpa försvarare att
+förstå angreppslevnadsloppet och bygga detekteringar. Att använda det som attack-checklista
+riskerar ytliga övningar, falsk känsla av täckning och att försvarsfrågor hamnar i skymundan.
+
+Uppgift 3
+● Initial Access: Hur angriparen får första fotfäste i miljön.
+● Execution: Hur kod eller kommandon körs på ett system.
+● Persistence: Hur angriparen säkerställer återkommande åtkomst.
+● Privilege Escalation: Hur angriparen får högre rättigheter.
+● Exfiltration: Hur data flyttas ut ur organisationen.
+
+Uppgift 4
+ATT&CK skapar ett gemensamt språk som gör att red, blue och ledning kan prata om samma
+angreppsstege utan missförstånd. Red team kan beskriva simulerade angrepp med tekniker,
+blue team kan mappa detekteringar mot samma tekniker och se vad som borde ha larmat.
+Ledningen får en översiktlig bild av täckning och risk, vilket underlättar prioritering och
+investeringar. Spårbarheten förbättras genom att incidenter dokumenteras med vilka tekniker
+som observerades och vilka källor som användes.
+
+Del 2 – TTP: Tactic, Technique och Procedure
+Uppgift 5
+● Tactic: Varför något görs (angriparens mål).
+● Technique: Hur målet uppnås på generell nivå.
+● Procedure: Den exakta implementation som setts i verkligheten.
+Exempel: Credential Access (tactic), OS Credential Dumping (technique), specifikt
+script som läste LSASS-minne.
+
+Uppgift 6
+● T1566 – Phishing (Initial Access): Tactic: få första fotfäste. Technique: skicka
+vilseledande meddelanden. Procedure: användare luras att klicka på länk eller öppna
+bilaga.
+● T1059 – Command and Scripting Interpreter (Execution): Tactic: få kod att köras.
+Technique: använda tolk/scriptmotor. Procedure: kommandon körs via inbyggd tolk.
+● T1078 – Valid Accounts (Persistence/Lateral Movement): Tactic: behålla
+åtkomst/förflytta sig. Technique: använda giltiga konton. Procedure: inloggning på
+flera system med samma konto.
+
+Uppgift 7
+Tactic: Credential Access
+● T1003 – OS Credential Dumping: Extraherar credentials från OS.
+● T1110 – Brute Force: Gissar lösenord för att få credentials.
+● T1557 – Adversary-in-the-Middle: Fångar upp trafik för att stjäla credentials.
+Alla tre har som mål att skaffa giltiga inloggningsuppgifter.
+
+Uppgift 8
+Det kan vara svårt att mappa en observation till rätt teknik p.g.a. ofullständiga loggar,
+bristande kontext, varierande datakvalitet mellan källor och behov av tydliga
+källhänvisningar för att motivera mappningen. Osäkerhet bör dokumenteras och granskas i
+grupp.
+
+Del 3 – Bygg en defensiv attackkedja
+Uppgift 9
+1. Initial Access
+2. Execution
+3. Persistence
+4. Lateral Movement
+5. Exfiltration
+
+Uppgift 10
+● Initial Access: Varför: få fotfäste. Hur: vilseledande meddelande. Vad såg vi: klick på
+okänd länk.
+● Execution: Varför: köra kod. Hur: inbyggd tolk. Vad såg vi: ny process startad.
+● Persistence: Varför: återkommande åtkomst. Hur: bestående mekanism. Vad såg vi:
+konfigurationsändring.
+● Lateral Movement: Varför: nå fler system. Hur: giltiga konton. Vad såg vi: inloggning
+på flera system.
+● Exfiltration: Varför: flytta ut data. Hur: extern kanal. Vad såg vi: stort utgående flöde.
+
+Uppgift 11
+Mest osäkra steg: Initial Access (oklart hur kontakten skedde), Lateral Movement (oklart
+vilka konton/system), Exfiltration (oklart vilka filer/destination). Behov: bättre loggtäckning,
+tydligare nätverkssegmentering, snabbare datainsamling från EDR/IAM/nätverk.
+
+Uppgift 12
+Initial Access, Execution, Persistence, Lateral Movement, Exfiltration
+Eller: Första kontakt, Kod körs, Återkommande åtkomst, Förflyttning, Data lämnar miljön.
+
+Del 4 – Försvarsfrågor och Blue/Purple-perspektiv
+Uppgift 13
+● Initial Access: Hur upptäcks detta tidigt? Vilka signaler i e-post/webb/endpoint?
+● Execution: Vilka loggar fångar nya processer/script? Finns baslinje?
+● Persistence: Vilka konfigurationsändringar borde alltid granskas?
+● Lateral Movement: Hur ser normala inloggningsmönster ut? Vilka avvikelser ska
+trigga undersökning?
+● Exfiltration: Vilka nätverkssignaler indikerar utgående data? Finns DLP/filter?
+
+Uppgift 14
+● T1059: Signaler: ovanliga tolkar/processer, avvikande scriptkörning, encoded
+commands.
+● T1078: Signaler: samma konto på flera system, ovanliga platser/tider, misslyckade +
+lyckade inloggningar.
+
+Uppgift 15
+● T1566: Utbildning, e-postfiltrering, MFA, rutiner för rapportering.
+● T1078: Åtkomstpolicyer, MFA, villkorsbaserad åtkomst, övervakning av
+inloggningar, rutiner för att stänga av konton.
+
+Uppgift 16
+En attackkedja hjälper teamet att se var detektering finns och var den saknas, prioritera
+åtgärder baserat på sannolikhet och impact, och följa upp mognad över tid. Den gör det
+möjligt att gå från abstrakt hotbild till handlingsplan: vilka tekniker är relevanta, vilka
+kontroller behövs, vad förbättrades efter incident/övning.
+
+Del 5 – Källor, spårbarhet och kvalitet
+Uppgift 17
+1. MITRE ATT&CK Enterprise Matrix – översikt över taktiker/tekniker.
+2. MITRE ATT&CK Technique Pages – detaljer om varje teknik, datakällor, detektion.
+3. CISA Best Practices for MITRE ATT&CK Mapping – rekommendationer för
+mappning och källkritik.
+
+Uppgift 18
+Säkerställ med: tydlig källa för varje mappning, kort motivering till varför tekniken valdes,
+dokumentation av osäkerhet (känt/antaget/oklart), och gruppgranskning för att fånga
+alternativa tolkningar.
+
+Uppgift 19
+Definition of Done för hotanalys:
+1. Attackkedja med 3–5 steg och ATT&CK-mappning.
+2. TTP-tabell ifylld för varje steg.
+3. Minst en försvarsfråga per steg.
+4. Minst tre källor listade.
+5. Osäkerheter dokumenterade.
+
+Uppgift 20
+En hotanalys blir användbar när den är tydlig, spårbar varje
+påstående har källa och anpassad till mottagaren. Det gör att andra kan
+verifiera, ifrågasätta och bygga vidare på analysen utan att gissa vad som ligger till grund.
+
+Del 6 – Koppling till backlog, sprint och Workshop 3
+Uppgift 21 – Uppdaterad backlog
+1. Bestämma roller – Prioritet: Hög
+○ Motivering: Strukturen behövs innan projektstart så alla vet vad de förväntas
+göra. Workshop 2 visade att otydliga roller gör det svårt att mappa TTP:er och
+försvarsfrågor till rätt ansvar.
+2. Gå igenom rollernas innebörd – Prioritet: Hög
+○ Motivering: Alla måste förstå sin roll för att kunna utföra arbetet. I
+attackkedje-övningen blev det tydligt att vi behöver veta vem som äger vilken
+del (t.ex. vem som granskar TTP-mappning, vem som formulerar
+försvarsfrågor).
+3. Diskutera hur kommunikation ska ske – Prioritet: Hög
+○ Motivering: Utan kommunikation faller samarbetet. Workshop 2 visade att vi
+behöver tydliga kanaler och rutiner för att snabbt dela osäkerheter kring
+mappningar och försvarsfrågor.
+4. Diskutera hur dokumentation ska ske – Prioritet: Medel
+○ Motivering: Viktigt för att kunna back tracka vad som gjorts eller ska göras. I
+hotanalysen behöver vi spåra källor, osäkerheter och beslut – det kräver en
+gemensam dokumentationsstruktur.
+5. Diskutera vår Definition of Done – Prioritet: Medel
+○ Motivering: DoD är viktig men kan justeras i kommande projekt. Workshop 2
+gav oss en mini-DoD för hotanalys som vi kan använda som utgångspunkt och
+sedan utvecklan.
+
+Uppgift 22 – Attackkedja och Sprint Goal
+Vårt nuvarande sprintfokus ligger på att bygga teamets grund: roller, kommunikation,
+dokumentation och hantering av hinder. Attackkedjan från Workshop 2 är fortfarande
+relevant eftersom den visar vilka taktiker och tekniker vi behöver förstå för att senare kunna
+koppla dem till våra framtida projekt (t.ex. utveckling, testning, lansering).
+Sprintmålet är fortfarande relevant, men vi behöver justera tonvikten: istället för att se
+attackkedjan som ett riktigt projekt, använder vi den som träningsdata för att öva på:
+● Hur vi mappar TTP:er tillsammans.
+● Hur vi formulerar försvarsfrågor som ett team.
+● Hur vi dokumenterar osäkerheter och källor enligt vår framtida DoD.
+När vi får våra riktiga projekt kan vi använda samma angreppssätt på verkliga attackvägar
+som är relevanta för de system vi bygger.
+
+Uppgift 23 – Uppföljningsfrågor inför Workshop 3
+1. Hur väl fungerade vår kommunikation och dokumentation när vi arbetade med
+attackkedjan, och vad behöver vi ändra inför nästa sprint?
+○ Kan användas i retrospektiv för att se om våra rutiner för kommunikation och
+dokumentation var tillräckliga.
+2. Vilka delar av vår Definition of Done för hotanalys kändes användbara, och vilka
+behöver vi justera innan nästa projekt?
+○ Kan användas i review för att validera om vår mini-DoD är tillräcklig eller
+behöver utökas.
+
+Uppgift 24 – Statusrapport till Workshop 3
+Vi har byggt en defensiv attackkedja med 5 steg och mappat varje steg till ATT&CK-taktiker
+och -tekniker.
+● En TTP-tabell och försvarsfrågor har skapats för hela kedjan, med dokumentation av
+källor och osäkerheter.
+● Vi har identifierat att våra största osäkerheter ligger i Initial Access och Lateral
+Movement, där vi behöver bättre data för att göra mer exakta mappningar.
+● Backlogen har uppdaterats med fem nya items med fokus på roller, kommunikation,
+dokumentation och Definition of Done.
+● Vi är osäkra på hur väl våra nuvarande rutiner för dokumentation och
+gruppgranskning fungerar i praktiken – detta vill vi testa mer i nästa sprint.
+● Vårt sprintmål bygga teamets grund är fortfarande relevant, men vi vill använda
+attackkedjan som träningsdata för att öva på våra nya rutiner.
+● Inför nästa sprint vill vi tydliggöra hur vi hanterar hinder och hur vi kopplar vår DoD
+till framtida projekt utveckling, testning, lansering.
