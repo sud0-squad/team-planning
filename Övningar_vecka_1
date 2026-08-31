@@ -1,1 +1,146 @@
+Del 1 – Reflektion kring säkerhetsteam
+Övning 1
+Ett cybersäkerhetsteam skyddar, upptäcker och svarar på hot, medan en utvecklingsgrupp
+bygger nya funktioner. Säkerhetsteamet levererar riskbedömningar, detekteringsregler och
+incidentrapporter, inte kod eller appar. Arbetet är både reaktivt och proaktivt.
 
+Övning 2
+1. Prioriteringspress – Många larm gör det svårt att veta vad som är viktigast.
+2. Brist på kontext – Utan affärsprioriteringar blir det svårt att rikta insatser rätt.
+3. Snabba hotförändringar – Nya metoder gör att planer snabbt blir inaktuella.
+Dessa utmaningar kräver tydlig kommunikation och iterativ planering.
+
+Övning 3
+1. Threat Intelligence-analytiker – tolkar hotaktörer.
+2. SOC-analytiker – bygger detekteringsregler.
+3. Incident Response-specialist – hanterar pågående incidenter.
+4. Red Team/penetrationstestare – testar försvaret.
+5. Säkerhetsarkitekt – ser till att lösningar är säkra och följer policy.
+
+Del 2 – Teamarbete
+Övning 4
+1. Dokumentera allt viktigt – för tydlighet och kunskapsdelning.
+2. Ge konstruktiv feedback – för att höja kvaliteten.
+3. Håll åtaganden – för tillit och planerbarhet.
+
+Övning 5
+● Teams: daglig snabb kommunikation.
+● E-post: formella beslut och sammanfattningar.
+● Möten: korta, med agenda och anteckningar.
+● Dokumentation: allt viktigt sparas delat t.ex. backlog, Sprint Goal, DoD.
+
+Övning 6
+1. Ta upp det tidigt, utan att peka ut någon.
+2. Ta reda på varför det blev försening.
+3. Fördela om arbete eller justera scope.
+4. Sätt ny deadline och följ upp vid nästa möte.
+
+Del 3 – Product Backlog
+Övning 7 (Threat Intelligence)
+1. Samla hotinfo om relevanta aktörer.
+2. Mappa kända TTP:er till våra system.
+3. Uppdatera hotbildsrapport kvartalsvis.
+4. Skapa enkel hotbibliotek-mall.
+5. Koppla hot till detekteringsregler.
+
+Övning 8 (MITRE ATT&CK)
+1. Lära oss ATT&CK-grunderna.
+2. Mappa våra incidenter mot ATT&CK.
+3. Bygga enkel täckningsmatris.
+4. Emulera en hotaktörs TTP:er (red team).
+5. Dokumentera fynd i ATT&CK-format.
+
+Övning 9 (Rapportering)
+1. Mall för veckorapport.
+2. Ledningsanpassad sammanfattning.
+3. Enkel dashboard för detektioner.
+4. Standardiserad incidentrapport.
+5. Kort presentationsspår för workshop.
+
+Övning 10 (Tre utvalda)
+1. Mappa incidenter mot ATT&CK – Översätt 5 incidenter till
+ATT&CK-taktiker/tekniker. Resultat: lista med incident : ATT&CK-ID.
+2. Bygg täckningsmatris – Markera vilka tekniker vi har detektion för. Resultat: översikt
+över styrkor och gap.
+3. Skapa veckorapportmall – Designa mall med fasta rubriker. Resultat: återanvändbar
+rapportmall.
+
+Del 4 – Prioritering
+Övning 11
+● Must Have: Mappa incidenter mot ATT&CK, bygg täckningsmatris, skapa
+veckorapportmall – ger grundförståelse och synlighet.
+● Should Have: Samla hotinfo, dokumentera i ATT&CK-format – viktigt men kan vänta
+något.
+● Could Have: Dashboard, hotbibliotek-mall – bra att ha, men inte kritiskt nu.
+
+Övning 12
+1. Mappa incidenter mot ATT&CK – visar vilka tekniker vi faktiskt möter.
+2. Bygg täckningsmatris – visar var vi har luckor.
+3. Lär oss ATT&CK-grunder – utan detta blir resten osäkert.
+
+Övning 13
+1. Dashboard för detektioner – kräver mer data och tid.
+2. Hotbibliotek-mall – kan börja med enklare listor.
+3. Avancerad red team-emulering – vänta tills vi förstår våra gap bättre.
+Del 5 – Sprint Goal
+
+Övning 14
+Sprint Goal: Skapa grundläggande ATT&CK-förståelse och mappa våra viktigaste incidenter
+så att vi ser våra största detektionsgap.
+
+Övning 15
+Sprint Goal är uppnått när vi har:
+● En lista med incidenter mappade till ATT&CK.
+● En enkel täckningsmatris över detektioner.
+● Alla i gruppen förstår ATT&CK-grunderna.
+● Dokumenterat arbete så andra kan fortsätta.
+● En kort sammanfattning/presentation av våra fynd.
+
+Övning 16
+1. Otillräcklig tid – lösning: dela upp i små delmål.
+2. Oklara incidentdata – lösning: använd bästa tillgängliga data, dokumentera
+antaganden.
+3. Ojämn arbetsfördelning – lösning: tydlig uppgiftslista och uppföljning varje möte.
+
+Del 6 – Definition of Done
+Övning 17
+1. Uppgiften är dokumenterad.
+2. Granskad av minst en annan i gruppen.
+3. Kopplad till rätt backlog-item.
+4. Kvalitetskontroll gjord.
+5. Sparad på rätt plats så alla hittar den.
+
+Övning 18
+Exempel: En incident är mappad till ATT&CK, men:
+● Ingen dokumentation om hur mappningen gjordes.
+● Ingen granskning av en annan i gruppen.
+● Filen ligger bara lokalt, inte delat.
+Utan dokumentation, granskning och rätt lagring är uppgiften inte klar enligt DoD.
+
+Del 7 – Förberedelse inför MITRE ATT&CK
+Övning 19
+1. Hur mappar vi incidenter till ATT&CK i praktiken?
+2. Vilka verktyg finns för täckningsmatris?
+3. Hur prioriterar vi detekteringsregler med ATT&CK?
+4. Hur använder vi ATT&CK i red team-övningar?
+5. Hur dokumenterar vi så andra team förstår?
+
+Övning 20
+MITRE ATT&CK ger ett gemensamt språk för attacker t.ex. T1059 istället för någon körde
+ett skript. Det hjälper oss att strukturera incidenter och se mönster i angrepp. Med ATT&CK
+kan vi prioritera vilka tekniker vi ska skydda mot först, baserat på vad som är vanligast och
+var vi har gap. Ur ett försvarsperspektiv används ramverket för att bygga detekteringsregler,
+testa våra kontroller med red/purple team och mäta hur bra vårt försvar täcker verkliga
+attackmetoder över tid.
+
+Frivillig fördjupning – Första sprinten
+● Sprint Goal: Skapa ATT&CK-grundförståelse och mappa incidenter för att se
+detektionsgap.
+● Backlog: Mappa incidenter, bygg täckningsmatris, lär oss ATT&CK, skapa
+veckorapportmall.
+● Prioritering: Must = mappning, matris, mall; Should = hotinfo; Could = dashboard.
+● DoD: Dokumenterat, granskat, kopplat till backlog, kvalitetskontroll, rätt lagring.
+● Risker: Tidsbrist, dålig data, ojämn fördelning – hanteras med delmål, antaganden och
+uppgiftslista.
+● Leverabler: ATT&CK-mappad incidentlista, täckningsmatris, rapportmall, kort
+sammanfattning.
