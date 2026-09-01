@@ -20,10 +20,16 @@ jobs:
         run: |
           # Define your majority threshold
           THRESHOLD=2
+          APPROVAL_LABEL="approved"
+          
+          # Ensure the approval label exists before trying to apply it
+          if ! gh api repos/$REPO/labels/$APPROVAL_LABEL >/dev/null 2>&1; then
+            gh label create "$APPROVAL_LABEL" --color "0e8a16" --description "Issue reached approval threshold" --repo $REPO
+          fi
           
           # Find all open issues that DO NOT already have the "approved" label
           # "is:issue" ensures we don't accidentally grab Pull Requests
-          ISSUES=$(gh issue list --repo $REPO --search "is:issue is:open -label:approved" --json number --jq '.[].number')
+          ISSUES=$(gh issue list --repo $REPO --search "is:issue is:open -label:$APPROVAL_LABEL" --json number --jq '.[].number')
           
           if [ -z "$ISSUES" ]; then
             echo "No open issues found needing approval."
@@ -48,8 +54,8 @@ jobs:
             echo "Total unique approvers for #$ISSUE_NUMBER: $UNIQUE_VOTES"
             
             if [ "$UNIQUE_VOTES" -ge "$THRESHOLD" ]; then
-              echo "Majority reached for #$ISSUE_NUMBER. Applying the 'Done' label."
-              gh issue edit $ISSUE_NUMBER --add-label "Done" --repo $REPO
+              echo "Majority reached for #$ISSUE_NUMBER. Applying the '$APPROVAL_LABEL' label."
+              gh issue edit $ISSUE_NUMBER --add-label "$APPROVAL_LABEL" --repo $REPO
             else
               echo "Not enough approvals yet for #$ISSUE_NUMBER."
             fi
