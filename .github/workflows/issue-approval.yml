@@ -40,7 +40,7 @@ jobs:
           # Get the internal IDs for the project board and the "approved" status column
           PROJ_ID=$(gh project view $PROJECT_NUM --owner $OWNER --format json --jq '.id')
           STATUS_FIELD_ID=$(gh project field-list $PROJECT_NUM --owner $OWNER --format json --jq '.fields[] | select(.name=="Status") | .id')
-          APPROVED_OPT_ID=$(gh project field-list $PROJECT_NUM --owner $OWNER --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="approved") | .id')
+          APPROVED_OPT_ID=$(gh project field-list $PROJECT_NUM --owner $OWNER --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="Approved") | .id')
           
           # Loop through each issue found
           for ISSUE_NUMBER in $ISSUES; do
