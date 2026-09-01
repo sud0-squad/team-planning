@@ -2,9 +2,7 @@ name: Scheduled Issue Approval Counter
 
 on:
   schedule:
-    # Runs every 15 minutes
     - cron: '*/15 * * * *'
-  # Allows you to run this workflow manually from the Actions tab for testing
   workflow_dispatch:
 
 jobs:
@@ -37,59 +35,117 @@ jobs:
               --repo "$REPO"
           fi
 
-          # Project metadata
-          PROJ_ID=$(gh project view "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.id')
+          # Get project node ID via GraphQL (reliable for project item-edit)
+          PROJ_ID=$(gh api graphql -f query='
+          query($owner:String!, $number:Int!) {
+            organization(login:$owner) {
+              projectV2(number:$number) {
+                id
+              }
+            }
+          }' -f owner="$OWNER" -F number="$PROJECT_NUM" --jq '.data.organization.projectV2.id')
+
+          if [ -z "${PROJ_ID:-}" ] || [ "$PROJ_ID" = "null" ]; then
+            echo "ERROR: Could not resolve ProjectV2 ID for owner=$OWNER project=$PROJECT_NUM"
+            exit 1
+          fi
+
+          # Get Status field + options via gh project field-list
           STATUS_FIELD_ID=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .id')
+          SOURCE_OPT_ID=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="'"$SOURCE_STATUS"'") | .id')
           TARGET_OPT_ID=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="'"$TARGET_STATUS"'") | .id')
 
-          # Guardrails: verify status options exist exactly
-          ALL_STATUS_OPTIONS=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .options[].name')
-
-          if ! echo "$ALL_STATUS_OPTIONS" | grep -Fxq "$SOURCE_STATUS"; then
-            echo "ERROR: SOURCE_STATUS '$SOURCE_STATUS' not found."
-            echo "Available Status options:"
-            echo "$ALL_STATUS_OPTIONS"
+          if [ -z "${STATUS_FIELD_ID:-}" ] || [ "$STATUS_FIELD_ID" = "null" ]; then
+            echo "ERROR: Status field not found on project."
+            exit 1
+          fi
+          if [ -z "${SOURCE_OPT_ID:-}" ] || [ "$SOURCE_OPT_ID" = "null" ]; then
+            echo "ERROR: Source status option '$SOURCE_STATUS' not found."
+            exit 1
+          fi
+          if [ -z "${TARGET_OPT_ID:-}" ] || [ "$TARGET_OPT_ID" = "null" ]; then
+            echo "ERROR: Target status option '$TARGET_STATUS' not found."
             exit 1
           fi
 
-          if ! echo "$ALL_STATUS_OPTIONS" | grep -Fxq "$TARGET_STATUS"; then
-            echo "ERROR: TARGET_STATUS '$TARGET_STATUS' not found."
-            echo "Available Status options:"
-            echo "$ALL_STATUS_OPTIONS"
-            exit 1
-          fi
-
-          echo "Debug: status values seen on project items:"
-          gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '
-            .items[]
-            | select(.content.number != null)
+          echo "Debug: project issues and detected Status values"
+          gh api graphql -f query='
+          query($owner:String!, $number:Int!) {
+            organization(login:$owner) {
+              projectV2(number:$number) {
+                items(first:100) {
+                  nodes {
+                    id
+                    content {
+                      __typename
+                      ... on Issue {
+                        number
+                        title
+                      }
+                    }
+                    fieldValues(first:50) {
+                      nodes {
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          name
+                          field {
+                            ... on ProjectV2SingleSelectField {
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }' -f owner="$OWNER" -F number="$PROJECT_NUM" --jq '
+            .data.organization.projectV2.items.nodes[]
+            | select(.content.__typename == "Issue")
             | {
                 issue: .content.number,
                 title: .content.title,
-                statusValues: [
-                  .fieldValues[]?
-                  | select(.field.name? == "Status")
-                  | (.name // .option.name // "UNKNOWN")
-                ]
+                statusValues: [ .fieldValues.nodes[]? | select(.field.name=="Status") | .name ]
               }'
 
-          # Read ONLY items where Status == "Approvals"
-          ITEMS_IN_APPROVALS=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '
-            .items[]
-            | select(.content.number != null)
-            | select(
-                any(.fieldValues[]?;
-                  (
-                    (.field.name? == "Status" and .name? == "'"$SOURCE_STATUS"'")
-                    or
-                    (.field.name? == "Status" and .option.name? == "'"$SOURCE_STATUS"'")
-                  )
-                )
-              )
-            | "\(.id) \(.content.number)"
-          ')
+          # Find only issues currently in SOURCE_STATUS (Approvals)
+          # Output lines: "<ITEM_ID> <ISSUE_NUMBER>"
+          ITEMS_IN_SOURCE=$(gh api graphql -f query='
+          query($owner:String!, $number:Int!) {
+            organization(login:$owner) {
+              projectV2(number:$number) {
+                items(first:100) {
+                  nodes {
+                    id
+                    content {
+                      __typename
+                      ... on Issue {
+                        number
+                      }
+                    }
+                    fieldValues(first:50) {
+                      nodes {
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          name
+                          field {
+                            ... on ProjectV2SingleSelectField {
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }' -f owner="$OWNER" -F number="$PROJECT_NUM" --jq '
+            .data.organization.projectV2.items.nodes[]
+            | select(.content.__typename == "Issue")
+            | select(any(.fieldValues.nodes[]?; .field.name=="Status" and .name=="'"$SOURCE_STATUS"'"))
+            | "\(.id) \(.content.number)"')
 
-          if [ -z "${ITEMS_IN_APPROVALS:-}" ]; then
+          if [ -z "${ITEMS_IN_SOURCE:-}" ]; then
             echo "No issues in '$SOURCE_STATUS'."
             exit 0
           fi
@@ -142,4 +198,4 @@ jobs:
             fi
 
             echo "----------------------------------------"
-          done <<< "$ITEMS_IN_APPROVALS"
+          done <<< "$ITEMS_IN_SOURCE"
