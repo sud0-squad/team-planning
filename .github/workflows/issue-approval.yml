@@ -48,8 +48,8 @@ jobs:
             echo "Total unique approvers for #$ISSUE_NUMBER: $UNIQUE_VOTES"
             
             if [ "$UNIQUE_VOTES" -ge "$THRESHOLD" ]; then
-              echo "Majority reached for #$ISSUE_NUMBER. Applying the 'approved' label."
-              gh issue edit $ISSUE_NUMBER --add-label "approved" --repo $REPO
+              echo "Majority reached for #$ISSUE_NUMBER. Applying the 'Done' label."
+              gh issue edit $ISSUE_NUMBER --add-label "Done" --repo $REPO
             else
               echo "Not enough approvals yet for #$ISSUE_NUMBER."
             fi
