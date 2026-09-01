@@ -2,88 +2,96 @@ name: Scheduled Issue Approval Counter
 
 on:
   schedule:
-    # Runs every 15 minutes
     - cron: '*/15 * * * *'
-  # Allows you to run this workflow manually from the Actions tab for testing
   workflow_dispatch:
 
 jobs:
   tally-votes-and-move:
     runs-on: ubuntu-latest
     steps:
-      - name: Check Approvals, Label, and Move Card
+      - name: Check Approval Reactions, Move Card, Label, and Comment
         env:
-          # Uses the custom token for project board access
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           REPO: ${{ github.repository }}
           OWNER: "sud0-squad"
           PROJECT_NUM: 3
         run: |
-          # Define your majority threshold
+          set -euo pipefail
+
           THRESHOLD=4
           APPROVAL_LABEL="approved"
-          
-          # Ensure the approval label exists before trying to apply it
-          if ! gh api repos/$REPO/labels/$APPROVAL_LABEL >/dev/null 2>&1; then
-            echo "Label '$APPROVAL_LABEL' not found. Creating it..."
-            gh label create "$APPROVAL_LABEL" --color "0e8a16" --description "Issue reached approval threshold" --repo $REPO
+          SOURCE_STATUS="Approval"
+          TARGET_STATUS="Approved"
+
+          # Ensure label exists
+          if ! gh api "repos/$REPO/labels/$APPROVAL_LABEL" >/dev/null 2>&1; then
+            gh label create "$APPROVAL_LABEL" \
+              --color "0e8a16" \
+              --description "Issue reached approval threshold" \
+              --repo "$REPO"
           fi
-          
-          # Find all open issues that DO NOT already have the "approved" label
-          ISSUES=$(gh issue list --repo $REPO --search "is:issue is:open -label:$APPROVAL_LABEL" --json number --jq '.[].number')
-          
-          if [ -z "$ISSUES" ]; then
-            echo "No open issues found needing approval."
+
+          # Project metadata
+          PROJ_ID=$(gh project view "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.id')
+          STATUS_FIELD_ID=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .id')
+          TARGET_OPT_ID=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="'"$TARGET_STATUS"'") | .id')
+
+          # Only items currently in "Approval"
+          ITEMS_IN_APPROVAL=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq \
+            '.items[]
+            | select(.content != null and .content.number != null)
+            | select(.fieldValues[]? | select(.field.name=="Status" and .name=="'"$SOURCE_STATUS"'"))
+            | "\(.id) \(.content.number)"')
+
+          if [ -z "${ITEMS_IN_APPROVAL:-}" ]; then
+            echo "No issues in '$SOURCE_STATUS'."
             exit 0
           fi
-          
-          # Get the internal IDs for the project board and the "approved" status column
-          PROJ_ID=$(gh project view $PROJECT_NUM --owner $OWNER --format json --jq '.id')
-          STATUS_FIELD_ID=$(gh project field-list $PROJECT_NUM --owner $OWNER --format json --jq '.fields[] | select(.name=="Status") | .id')
-          APPROVED_OPT_ID=$(gh project field-list $PROJECT_NUM --owner $OWNER --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="Approved") | .id')
-          
-          # Loop through each issue found
-          for ISSUE_NUMBER in $ISSUES; do
-            echo "Checking Issue #$ISSUE_NUMBER..."
-            
-            # 1. Get usernames of everyone who left ANY comment
-            COMMENT_VOTES=$(gh api repos/$REPO/issues/$ISSUE_NUMBER/comments \
-              --jq '.[].user.login' || echo "")
-            
-            # 2. Get usernames of people who reacted 👍 to the main issue body
-            EMOJI_VOTES=$(gh api repos/$REPO/issues/$ISSUE_NUMBER/reactions \
-              --jq '.[] | select(.content == "+1") | .user.login' || echo "")
-            
-            # 3. Combine lists, strip empty lines, sort for unique users, and count
-            UNIQUE_VOTES=$(echo -e "$COMMENT_VOTES\n$EMOJI_VOTES" | grep -v '^$' | sort -u | wc -l)
-            
-            echo "Total unique approvers for #$ISSUE_NUMBER: $UNIQUE_VOTES"
-            
-            if [ "$UNIQUE_VOTES" -ge "$THRESHOLD" ]; then
-              echo "Majority reached for #$ISSUE_NUMBER."
-              
-              # Find this specific issue's card ID on the project board
-              ITEM_ID=$(gh project item-list $PROJECT_NUM --owner $OWNER --format json --jq ".items[] | select(.content.number==$ISSUE_NUMBER) | .id")
-              
-              # Move the card on the board
-              if [ -n "$ITEM_ID" ]; then
-                echo "Moving card to '$APPROVAL_LABEL' column..."
-                if ! MOVE_OUTPUT=$(gh project item-edit --id "$ITEM_ID" --project-id "$PROJ_ID" --field-id "$STATUS_FIELD_ID" --single-select-option-id "$APPROVED_OPT_ID" 2>&1); then
-                  if echo "$MOVE_OUTPUT" | grep -q "no changes to make"; then
-                    echo "Card is already in '$APPROVAL_LABEL' column."
-                  else
-                    echo "$MOVE_OUTPUT"
-                    exit 1
-                  fi
+
+          while IFS=' ' read -r ITEM_ID ISSUE_NUMBER; do
+            [ -z "${ITEM_ID:-}" ] && continue
+            [ -z "${ISSUE_NUMBER:-}" ] && continue
+
+            echo "Checking issue #$ISSUE_NUMBER..."
+
+            # Skip if already labeled approved
+            if gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qx "$APPROVAL_LABEL"; then
+              echo "Already labeled '$APPROVAL_LABEL', skipping."
+              echo "----------------------------------------"
+              continue
+            fi
+
+            # Count ONLY unique users who reacted +1 to issue body
+            UNIQUE_REACTION_COUNT=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/$REPO/issues/$ISSUE_NUMBER/reactions?per_page=100" \
+              --jq '[.[] | select(.content == "+1") | .user.login] | unique | length')
+
+            echo "Unique 👍 approvals: $UNIQUE_REACTION_COUNT"
+
+            if [ "$UNIQUE_REACTION_COUNT" -ge "$THRESHOLD" ]; then
+              echo "Threshold reached. Moving to '$TARGET_STATUS'..."
+
+              if ! MOVE_OUTPUT=$(gh project item-edit \
+                --id "$ITEM_ID" \
+                --project-id "$PROJ_ID" \
+                --field-id "$STATUS_FIELD_ID" \
+                --single-select-option-id "$TARGET_OPT_ID" 2>&1); then
+                if echo "$MOVE_OUTPUT" | grep -q "no changes to make"; then
+                  echo "Already in '$TARGET_STATUS'."
+                else
+                  echo "$MOVE_OUTPUT"
+                  exit 1
                 fi
               fi
-              
-              # Apply the label so it is skipped on the next timer check
-              echo "Applying the '$APPROVAL_LABEL' label."
-              gh issue edit $ISSUE_NUMBER --add-label "$APPROVAL_LABEL" --repo $REPO
+
+              gh issue edit "$ISSUE_NUMBER" --add-label "$APPROVAL_LABEL" --repo "$REPO"
+
+              gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body \
+                "✅ This issue received **$UNIQUE_REACTION_COUNT** unique 👍 approvals (threshold: **$THRESHOLD**) and was automatically moved from **$SOURCE_STATUS** to **$TARGET_STATUS**."
             else
-              echo "Not enough approvals yet for #$ISSUE_NUMBER."
+              echo "Not enough 👍 approvals yet."
             fi
-            
+
             echo "----------------------------------------"
-          done
+          done <<< "$ITEMS_IN_APPROVAL"
