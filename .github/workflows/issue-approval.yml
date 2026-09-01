@@ -20,7 +20,7 @@ jobs:
 
           THRESHOLD=4
           APPROVAL_LABEL="approved"
-          SOURCE_STATUS="Approval"
+          SOURCE_STATUS="Approvals"
           TARGET_STATUS="Approved"
 
           # Ensure label exists
