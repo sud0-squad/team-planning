@@ -49,7 +49,7 @@ jobs:
             
             if [ "$UNIQUE_VOTES" -ge "$THRESHOLD" ]; then
               echo "Majority reached for #$ISSUE_NUMBER. Applying the 'Done' label."
-              gh issue close $ISSUE_NUMBER --repo $REPO --reason "completed"
+              gh issue edit $ISSUE_NUMBER --add-label "Done" --repo $REPO
             else
               echo "Not enough approvals yet for #$ISSUE_NUMBER."
             fi
