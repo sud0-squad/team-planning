@@ -2,7 +2,9 @@ name: Scheduled Issue Approval Counter
 
 on:
   schedule:
+    # Runs every 15 minutes
     - cron: '*/15 * * * *'
+  # Allows you to run this workflow manually from the Actions tab for testing
   workflow_dispatch:
 
 jobs:
@@ -23,8 +25,12 @@ jobs:
           SOURCE_STATUS="Approvals"
           TARGET_STATUS="Approved"
 
+          echo "Repo: $REPO | Owner: $OWNER | Project: $PROJECT_NUM"
+          echo "Source Status: $SOURCE_STATUS | Target Status: $TARGET_STATUS"
+
           # Ensure label exists
           if ! gh api "repos/$REPO/labels/$APPROVAL_LABEL" >/dev/null 2>&1; then
+            echo "Creating missing label: $APPROVAL_LABEL"
             gh label create "$APPROVAL_LABEL" \
               --color "0e8a16" \
               --description "Issue reached approval threshold" \
@@ -36,14 +42,54 @@ jobs:
           STATUS_FIELD_ID=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .id')
           TARGET_OPT_ID=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="'"$TARGET_STATUS"'") | .id')
 
-          # Only items currently in "Approval"
-          ITEMS_IN_APPROVAL=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq \
-            '.items[]
-            | select(.content != null and .content.number != null)
-            | select(.fieldValues[]? | select(.field.name=="Status" and .name=="'"$SOURCE_STATUS"'"))
-            | "\(.id) \(.content.number)"')
+          # Guardrails: verify status options exist exactly
+          ALL_STATUS_OPTIONS=$(gh project field-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '.fields[] | select(.name=="Status") | .options[].name')
 
-          if [ -z "${ITEMS_IN_APPROVAL:-}" ]; then
+          if ! echo "$ALL_STATUS_OPTIONS" | grep -Fxq "$SOURCE_STATUS"; then
+            echo "ERROR: SOURCE_STATUS '$SOURCE_STATUS' not found."
+            echo "Available Status options:"
+            echo "$ALL_STATUS_OPTIONS"
+            exit 1
+          fi
+
+          if ! echo "$ALL_STATUS_OPTIONS" | grep -Fxq "$TARGET_STATUS"; then
+            echo "ERROR: TARGET_STATUS '$TARGET_STATUS' not found."
+            echo "Available Status options:"
+            echo "$ALL_STATUS_OPTIONS"
+            exit 1
+          fi
+
+          echo "Debug: status values seen on project items:"
+          gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '
+            .items[]
+            | select(.content.number != null)
+            | {
+                issue: .content.number,
+                title: .content.title,
+                statusValues: [
+                  .fieldValues[]?
+                  | select(.field.name? == "Status")
+                  | (.name // .option.name // "UNKNOWN")
+                ]
+              }'
+
+          # Read ONLY items where Status == "Approvals"
+          ITEMS_IN_APPROVALS=$(gh project item-list "$PROJECT_NUM" --owner "$OWNER" --format json --jq '
+            .items[]
+            | select(.content.number != null)
+            | select(
+                any(.fieldValues[]?;
+                  (
+                    (.field.name? == "Status" and .name? == "'"$SOURCE_STATUS"'")
+                    or
+                    (.field.name? == "Status" and .option.name? == "'"$SOURCE_STATUS"'")
+                  )
+                )
+              )
+            | "\(.id) \(.content.number)"
+          ')
+
+          if [ -z "${ITEMS_IN_APPROVALS:-}" ]; then
             echo "No issues in '$SOURCE_STATUS'."
             exit 0
           fi
@@ -52,16 +98,16 @@ jobs:
             [ -z "${ITEM_ID:-}" ] && continue
             [ -z "${ISSUE_NUMBER:-}" ] && continue
 
-            echo "Checking issue #$ISSUE_NUMBER..."
+            echo "Checking issue #$ISSUE_NUMBER (item $ITEM_ID)..."
 
             # Skip if already labeled approved
             if gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qx "$APPROVAL_LABEL"; then
-              echo "Already labeled '$APPROVAL_LABEL', skipping."
+              echo "Issue #$ISSUE_NUMBER already has '$APPROVAL_LABEL'. Skipping."
               echo "----------------------------------------"
               continue
             fi
 
-            # Count ONLY unique users who reacted +1 to issue body
+            # Count ONLY unique +1 reactions on issue body
             UNIQUE_REACTION_COUNT=$(gh api \
               -H "Accept: application/vnd.github+json" \
               "repos/$REPO/issues/$ISSUE_NUMBER/reactions?per_page=100" \
@@ -70,7 +116,7 @@ jobs:
             echo "Unique 👍 approvals: $UNIQUE_REACTION_COUNT"
 
             if [ "$UNIQUE_REACTION_COUNT" -ge "$THRESHOLD" ]; then
-              echo "Threshold reached. Moving to '$TARGET_STATUS'..."
+              echo "Threshold reached for #$ISSUE_NUMBER. Moving to '$TARGET_STATUS'..."
 
               if ! MOVE_OUTPUT=$(gh project item-edit \
                 --id "$ITEM_ID" \
@@ -85,13 +131,15 @@ jobs:
                 fi
               fi
 
+              echo "Adding label '$APPROVAL_LABEL'..."
               gh issue edit "$ISSUE_NUMBER" --add-label "$APPROVAL_LABEL" --repo "$REPO"
 
+              echo "Posting comment..."
               gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body \
                 "✅ This issue received **$UNIQUE_REACTION_COUNT** unique 👍 approvals (threshold: **$THRESHOLD**) and was automatically moved from **$SOURCE_STATUS** to **$TARGET_STATUS**."
             else
-              echo "Not enough 👍 approvals yet."
+              echo "Not enough 👍 approvals yet for #$ISSUE_NUMBER."
             fi
 
             echo "----------------------------------------"
-          done <<< "$ITEMS_IN_APPROVAL"
+          done <<< "$ITEMS_IN_APPROVALS"
