@@ -68,7 +68,14 @@ jobs:
               # Move the card on the board
               if [ -n "$ITEM_ID" ]; then
                 echo "Moving card to '$APPROVAL_LABEL' column..."
-                gh project item-edit --id "$ITEM_ID" --project-id "$PROJ_ID" --field-id "$STATUS_FIELD_ID" --single-select-option-id "$APPROVED_OPT_ID"
+                if ! MOVE_OUTPUT=$(gh project item-edit --id "$ITEM_ID" --project-id "$PROJ_ID" --field-id "$STATUS_FIELD_ID" --single-select-option-id "$APPROVED_OPT_ID" 2>&1); then
+                  if echo "$MOVE_OUTPUT" | grep -q "no changes to make"; then
+                    echo "Card is already in '$APPROVAL_LABEL' column."
+                  else
+                    echo "$MOVE_OUTPUT"
+                    exit 1
+                  fi
+                fi
               fi
               
               # Apply the label so it is skipped on the next timer check
