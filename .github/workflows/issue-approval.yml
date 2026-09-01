@@ -20,7 +20,7 @@ jobs:
           PROJECT_NUM: 3
         run: |
           # Define your majority threshold
-          THRESHOLD=2
+          THRESHOLD=4
           APPROVAL_LABEL="approved"
           
           # Ensure the approval label exists before trying to apply it
