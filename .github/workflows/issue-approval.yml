@@ -1,0 +1,40 @@
+name: Issue Approval Counter
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  tally-votes:
+    if: ${{ !github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Count unique votes and label issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Get usernames of everyone who left ANY comment
+          COMMENT_VOTES=$(gh api repos/$REPO/issues/$ISSUE_NUMBER/comments \
+            --jq '.[].user.login')
+          
+          # Get usernames of people who reacted 👍 to the main issue body
+          EMOJI_VOTES=$(gh api repos/$REPO/issues/$ISSUE_NUMBER/reactions \
+            --jq '.[] | select(.content == "+1") | .user.login')
+          
+          # Combine lists, strip empty lines, sort for unique users, and count
+          UNIQUE_VOTES=$(echo -e "$COMMENT_VOTES\n$EMOJI_VOTES" | grep -v '^$' | sort -u | wc -l)
+          
+          echo "Total unique approvers: $UNIQUE_VOTES"
+          
+          THRESHOLD=4
+          
+          if [ "$UNIQUE_VOTES" -ge "$THRESHOLD" ]; then
+            echo "Majority reached. Applying the 'approved' label."
+            gh issue edit $ISSUE_NUMBER --add-label "approved" --repo $REPO
+          else
+            echo "Not enough approvals yet."
+          fi
