@@ -8,15 +8,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  tally-votes:
+  tally-votes-and-move:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     steps:
-      - name: Check all open issues for approvals
+      - name: Check Approvals, Label, and Move Card
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Uses the custom token for project board access
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           REPO: ${{ github.repository }}
+          OWNER: "sud0-squad"
+          PROJECT_NUM: 3
         run: |
           # Define your majority threshold
           THRESHOLD=2
@@ -24,17 +25,22 @@ jobs:
           
           # Ensure the approval label exists before trying to apply it
           if ! gh api repos/$REPO/labels/$APPROVAL_LABEL >/dev/null 2>&1; then
+            echo "Label '$APPROVAL_LABEL' not found. Creating it..."
             gh label create "$APPROVAL_LABEL" --color "0e8a16" --description "Issue reached approval threshold" --repo $REPO
           fi
           
           # Find all open issues that DO NOT already have the "approved" label
-          # "is:issue" ensures we don't accidentally grab Pull Requests
           ISSUES=$(gh issue list --repo $REPO --search "is:issue is:open -label:$APPROVAL_LABEL" --json number --jq '.[].number')
           
           if [ -z "$ISSUES" ]; then
             echo "No open issues found needing approval."
             exit 0
           fi
+          
+          # Get the internal IDs for the project board and the "approved" status column
+          PROJ_ID=$(gh project view $PROJECT_NUM --owner $OWNER --format json --jq '.id')
+          STATUS_FIELD_ID=$(gh project field-list $PROJECT_NUM --owner $OWNER --format json --jq '.fields[] | select(.name=="Status") | .id')
+          APPROVED_OPT_ID=$(gh project field-list $PROJECT_NUM --owner $OWNER --format json --jq '.fields[] | select(.name=="Status") | .options[] | select(.name=="approved") | .id')
           
           # Loop through each issue found
           for ISSUE_NUMBER in $ISSUES; do
@@ -54,7 +60,19 @@ jobs:
             echo "Total unique approvers for #$ISSUE_NUMBER: $UNIQUE_VOTES"
             
             if [ "$UNIQUE_VOTES" -ge "$THRESHOLD" ]; then
-              echo "Majority reached for #$ISSUE_NUMBER. Applying the '$APPROVAL_LABEL' label."
+              echo "Majority reached for #$ISSUE_NUMBER."
+              
+              # Find this specific issue's card ID on the project board
+              ITEM_ID=$(gh project item-list $PROJECT_NUM --owner $OWNER --format json --jq ".items[] | select(.content.number==$ISSUE_NUMBER) | .id")
+              
+              # Move the card on the board
+              if [ -n "$ITEM_ID" ]; then
+                echo "Moving card to '$APPROVAL_LABEL' column..."
+                gh project item-edit --id "$ITEM_ID" --project-id "$PROJ_ID" --field-id "$STATUS_FIELD_ID" --single-select-option-id "$APPROVED_OPT_ID"
+              fi
+              
+              # Apply the label so it is skipped on the next timer check
+              echo "Applying the '$APPROVAL_LABEL' label."
               gh issue edit $ISSUE_NUMBER --add-label "$APPROVAL_LABEL" --repo $REPO
             else
               echo "Not enough approvals yet for #$ISSUE_NUMBER."
